@@ -43,6 +43,7 @@ public class MongoAccessor {
         GridFSInputFile inputFile = fs.createFile(data);
         inputFile.setFilename(fileName);
         inputFile.setMetaData(new BasicDBObject("dir", DirUtils.getDir(fileName)));
+        inputFile.getMetaData().put("fuse", true);
         inputFile.save();
         return inputFile.getId().toString();
     }
