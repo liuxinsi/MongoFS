@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 
 /**
  * @author liuxinsi
+ * @mail akalxs@gmail.com
  */
 public class MongoFileSystem extends FuseFilesystemAdapterFull {
     private MongoAccessor mongoAccessor;
@@ -112,7 +113,7 @@ public class MongoFileSystem extends FuseFilesystemAdapterFull {
                     }).collect(Collectors.toSet());
 
             filler.add(filtedDirSet);
-            filler.add(mongoAccessor.loadFiles(path));
+            filler.add(mongoAccessor.loadFileNames(path));
             return 0;
         }
         return -ErrorCodes.ENOENT();
@@ -201,38 +202,6 @@ public class MongoFileSystem extends FuseFilesystemAdapterFull {
                 fileWriteBuf.put(path, bytes);
             }
             return (int) bufSize;
-
-            // get file from mongodb
-//            GridFSDBFile fsdbFile = mongoAccessor.get(path);
-//            ByteBuffer bb = null;
-//            try {
-//                try (InputStream in = fsdbFile.getInputStream()) {
-//                    bb = ByteBuffer.wrap(IOUtils.toByteArray(in));
-//                }
-//            } catch (IOException e) {
-//                // todo logging this shit
-//                e.printStackTrace();
-//            }
-//
-//            // new buf
-//            int maxWriteIndex = (int) (writeOffset + bufSize);
-//            byte[] bytesToWrite = new byte[(int) bufSize];
-//            if (maxWriteIndex > bb.capacity()) {
-//                final ByteBuffer newContents = ByteBuffer.allocate(maxWriteIndex);
-//                newContents.put(bb);
-//                bb = newContents;
-//            }
-//            buf.get(bytesToWrite, 0, (int) bufSize);
-//            bb.position((int) writeOffset);
-//            bb.put(bytesToWrite);
-//            bb.position(0);
-//
-//            // delete old file
-//            mongoAccessor.delete(fileIndex.get(path));
-//            // replace it
-//            String id = mongoAccessor.save(bb.array(), path);
-//            fileIndex.put(path, id);
-//            return (int) bufSize;
         } else if (dirIndex.contains(path)) {
             return -ErrorCodes.EISDIR();
         }
@@ -241,31 +210,28 @@ public class MongoFileSystem extends FuseFilesystemAdapterFull {
 
     @Override
     public int release(String path, StructFuseFileInfo.FileInfoWrapper info) {
-        if (!fileWriteBuf.containsKey(path)) {
-            return super.release(path, info);
-
-        }
-
-        byte[] data = new byte[0];
-        try {
-            try (ByteArrayOutputStream bao = new ByteArrayOutputStream()) {
-                List<byte[]> byteList = fileWriteBuf.remove(path);
-                for (byte[] bytes : byteList) {
-                    bao.write(bytes);
+        if (fileWriteBuf.containsKey(path)) {
+            byte[] data = new byte[0];
+            try {
+                try (ByteArrayOutputStream bao = new ByteArrayOutputStream()) {
+                    List<byte[]> byteList = fileWriteBuf.remove(path);
+                    for (byte[] bytes : byteList) {
+                        bao.write(bytes);
+                    }
+                    data = bao.toByteArray();
                 }
-                data = bao.toByteArray();
+            } catch (IOException e) {
+                // todo logging this shit
+                e.printStackTrace();
             }
-        } catch (IOException e) {
-            // todo logging this shit
-            e.printStackTrace();
-        }
 
-        // delete old file
-        mongoAccessor.delete(fileIndex.get(path));
-        // replace it
-        String id = mongoAccessor.save(data, path);
-        fileIndex.put(path, id);
-        return 0;
+            // delete old file
+            mongoAccessor.delete(fileIndex.get(path));
+            // replace it
+            String id = mongoAccessor.save(data, path);
+            fileIndex.put(path, id);
+        }
+        return super.release(path, info);
     }
 
     public FuseFilesystem log() {

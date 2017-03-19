@@ -1,0 +1,12 @@
+app:
+  build: .
+  links:
+   - mongodb
+  ports:
+   - "22122:22"
+
+mongodb:
+  image: daocloud.io/library/mongo
+  ports:
+   - "27017:27017"
+

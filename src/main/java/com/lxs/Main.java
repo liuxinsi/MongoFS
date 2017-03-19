@@ -13,11 +13,15 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * @author liuxinsi
+ * @mail akalxs@gmail.com
  */
 public class Main {
 
@@ -61,6 +65,15 @@ public class Main {
         MongoAccessor ma = new MongoAccessor(mongoClient, dbName);
 
         // mount
-        new MongoFileSystem(ma).log().mount(cl.getOptionValue("m"));
+        String mount = cl.getOptionValue("m");
+        if (!Files.exists(Paths.get(mount))) {
+            try {
+                Files.createDirectory(Paths.get(mount));
+            } catch (IOException e) {
+                System.err.println("create " + mount + " ex:" + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+        new MongoFileSystem(ma).log().mount(mount);
     }
 }

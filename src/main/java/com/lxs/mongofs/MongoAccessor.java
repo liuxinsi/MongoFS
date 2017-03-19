@@ -6,7 +6,6 @@ import com.mongodb.DBCollection;
 import com.mongodb.MongoClient;
 import com.mongodb.gridfs.GridFS;
 import com.mongodb.gridfs.GridFSDBFile;
-import com.mongodb.gridfs.GridFSFile;
 import com.mongodb.gridfs.GridFSInputFile;
 import org.bson.types.ObjectId;
 
@@ -15,6 +14,7 @@ import java.util.stream.Collectors;
 
 /**
  * @author liuxinsi
+ * @mail akalxs@gmail.com
  */
 public class MongoAccessor {
     private MongoClient mongoClient;
@@ -48,11 +48,15 @@ public class MongoAccessor {
         return inputFile.getId().toString();
     }
 
-    public List<String> loadFiles(String dir) {
+    public List<String> loadFileNames(String dir) {
         GridFS fs = new GridFS(getDatabase());
-        return fs.find(new BasicDBObject("metadata.dir", dir))
+
+        BasicDBObject query = new BasicDBObject();
+        query.put("metadata.fuse", true);
+        query.put("metadata.dir", dir);
+        return fs.find(query)
                 .stream()
-                .map(GridFSFile::getFilename)
+                .map(gridFSDBFile -> DirUtils.getFileName(gridFSDBFile.getFilename()))
                 .collect(Collectors.toList());
     }
 
